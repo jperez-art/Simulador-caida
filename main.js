@@ -66,6 +66,7 @@ const scenarioSelect = q('scenario');
 const inputG = q('input-g');
 const inputM = q('input-m');
 const inputK = q('input-k');
+const modelSelect = q('model'); 
 const inputY0 = q('input-y0');
 const inputV0 = q('input-v0');
 const inputBounce = q('input-bounce');
@@ -123,10 +124,15 @@ function setScenario(name) {
   inputM.value = 1.0;
   inputY0.value = 5;
   inputV0.value = 0;
-  inputBounce.value = 0.8
+  inputBounce.value = 0.8;
+
+  // <- AÑADE ESTA LÍNEA para garantizar un modelo por defecto
+  if (modelSelect) modelSelect.value = 'quadratic';
+
   floor.material.color.setHex(s.floorColor);
   scene.background = new THREE.Color(s.bg);
 }
+
 
 function resetSimulationState() {
   sim.running = false;
@@ -150,9 +156,13 @@ function resetSimulationState() {
   chartV.update();
 }
 
-function computeTheoreticalVtQuadratic(m, g, k) {
+function computeTheoreticalVt(m, g, k) {
   if (k <= 0) return Infinity;
-  return Math.sqrt((m * g) / k);
+  if (modelSelect && modelSelect.value === "linear") {
+    return (m * g) / k;           // vt para arrastre lineal
+  } else {
+    return Math.sqrt((m * g) / k); // vt para arrastre cuadrático
+  }
 }
 
 // --------------------------- Integración ---------------------------
@@ -161,12 +171,21 @@ function integrateStep(dt) {
   const g = sim.g;
   const k = sim.k;
   const m = sim.m;
-  const dv = g - (k / m) * v * Math.abs(v);
+  let dv;
+
+  if (modelSelect && modelSelect.value === "linear") {
+    // Modelo lineal: m dv/dt = mg - k v
+    dv = g - (k / m) * v;
+  } else {
+    // Modelo cuadrático: m dv/dt = mg - k v |v|
+    // (se usa v*|v| para que el drag siempre oponga la velocidad)
+    dv = g - (k / m) * v * Math.abs(v);
+  }
+
   const newV = v + dv * dt;
   const newY = sim.y - newV * dt;
   return { v: newV, y: newY };
 }
-
 // --------------------------- Loop principal ---------------------------
 let lastFrame = performance.now();
 function loop(now) {
@@ -186,10 +205,17 @@ function loop(now) {
       sim.history.y.push(sim.y);
       sim.history.v.push(sim.v);
 
-      if (sim.terminalSim === null && sim.k > 0) {
-        const dv = Math.abs(computeTheoreticalVtQuadratic(sim.m, sim.g, sim.k) - sim.v);
-        if (dv < 0.02) sim.terminalSim = sim.v;
+  if (sim.terminalSim === null && sim.k > 0) {
+    const vtTheory = computeTheoreticalVt(sim.m, sim.g, sim.k);
+    // cuando la velocidad actual está cerca de la teórica, guardamos vt simulada
+    if (isFinite(vtTheory)) {
+      const dvAbs = Math.abs(vtTheory - Math.abs(sim.v)); // comparando magnitudes
+      if (dvAbs < Math.max(0.5, 0.1 * vtTheory)) {
+        sim.terminalSim = Math.abs(sim.v);
       }
+    }
+  }
+
 
       if (sim.y <= 0) {
         sim.y = 0;
@@ -254,19 +280,37 @@ scenarioSelect.addEventListener('change', () => {
   resetSimulationState();
 });
 
-renderer.domElement.addEventListener('pointerdown', (ev) => {
-  sim.v = -3.5;
+// cuando se cambia el modelo, reiniciamos la simulación para evitar mezclar historiales
+modelSelect.addEventListener('change', () => {
+  resetSimulationState();
 });
+
+
 
 function finalizeAnalysis() {
   const timeTotal = sim.history.t.at(-1) || sim.t;
   const vImpact = sim.history.v.at(-1) || sim.v;
-  const vtTheory = computeTheoreticalVtQuadratic(sim.m, sim.g, sim.k);
+  const vtTheory = computeTheoreticalVt(sim.m, sim.g, sim.k);
+  const vtSim = sim.terminalSim || 0;
+
+  let kCalc = '—';
+  if (vtSim > 0 && isFinite(vtSim)) {
+    if (modelSelect && modelSelect.value === "linear") {
+      // k = m g / vt  (lineal)
+      kCalc = (sim.m * sim.g / vtSim).toFixed(4);
+    } else {
+      // k = m g / vt^2  (cuadrático)
+      kCalc = (sim.m * sim.g / (vtSim * vtSim)).toFixed(4);
+    }
+  }
+
   analysisBody.innerHTML = `
     <strong>Tiempo total:</strong> ${timeTotal.toFixed(3)} s<br>
     <strong>Velocidad en impacto:</strong> ${vImpact.toFixed(3)} m/s<br>
-    <strong>Velocidad terminal (teórica):</strong> ${isFinite(vtTheory) ? vtTheory.toFixed(3) + ' m/s' : 'No aplica (k=0)'}<br>
-    <strong>Velocidad terminal (simulada):</strong> ${sim.terminalSim ? sim.terminalSim.toFixed(3) + ' m/s' : 'No alcanzada'}<br>
+    <strong>Velocidad terminal (teórica):</strong> ${isFinite(vtTheory) ? vtTheory.toFixed(4) + ' m/s' : 'No aplica (k=0)'}<br>
+    <strong>Velocidad terminal (simulada):</strong> ${sim.terminalSim ? sim.terminalSim.toFixed(4) + ' m/s' : 'No alcanzada'}<br>
+    <strong>k estimado:</strong> ${kCalc}<br>
+    <strong>Modelo:</strong> ${modelSelect && modelSelect.value === "linear" ? "Lineal (kv)" : "Cuadrático (kv²)"}
   `;
 }
 

@@ -50,7 +50,6 @@
   <div id="app">
     <div id="canvas-area">
       <!-- Three.js renderer will be appended here -->
-      <footer>Click en la escena para dar impulso ↑</footer>
     </div>
 
     <div id="ui">
@@ -58,8 +57,8 @@
 
       <label>Escenario</label>
       <select id="scenario">
-        <option value="earth">Tierra (con aire)</option>
-        <option value="moon">Luna (sin aire)</option>
+        <option value="earth">Tierra</option>
+        <option value="moon">Luna</option>
         <option value="mars">Marte</option>
         <option value="gas">Planeta gaseoso</option>
         <option value="water">Líquido (agua)</option>
@@ -78,6 +77,11 @@
 
       <label>Coef. de arrastre k</label>
       <input id="input-k" type="number" step="0.01" value="0.5">
+      <label>Modelo de ecuación</label>
+      <select id="model">
+        <option value="linear">Lineal (kv)</option>
+        <option value="quadratic" selected>Cuadrático (kv²)</option>
+      </select>
 
       <div class="row">
         <div>

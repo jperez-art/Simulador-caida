@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -120,3 +121,127 @@
   <script type="module" src="./main.js"></script>
 </body>
 </html>
+=======
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Simulador Caída Libre</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0b0c0f;
+      --panel: rgba(20,20,25,0.85);
+      --accent: #00d1ff;
+      --muted: #9aa3b2;
+    }
+    html,body { height:100%; margin:0; background:var(--bg); color:#fff; font-family: Inter, Arial, sans-serif; }
+    #app { display:flex; height:100%; }
+    #canvas-area { flex:1; position:relative; }
+    canvas.three-canvas { width:100%; height:100%; display:block; }
+    #ui {
+      width:360px;
+      padding:14px;
+      background:var(--panel);
+      box-shadow: 0 6px 24px rgba(0,0,0,0.6);
+      overflow:auto;
+    }
+    h2 { margin:6px 0 12px 0; color:var(--accent); }
+    label { display:block; margin-top:8px; color:var(--muted); font-size:13px; }
+    input[type="number"], select { width:100%; padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.06); background:#000000; color:#fff; margin-top:6px; }
+    .row { display:flex; gap:8px; }
+    .row > * { flex:1; }
+    button { margin-top:10px; width:100%; padding:10px; border-radius:8px; border:none; background:var(--accent); color:#000; font-weight:700; cursor:pointer; }
+    .small { padding:8px 10px; font-size:13px; background:#222; color:#fff; border-radius:6px; border:1px solid rgba(255,255,255,0.03); }
+    #charts { margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+    canvas.chart-canvas { background:#fff; border-radius:8px; }
+    #analysis { margin-top:12px; background:rgba(255,255,255,0.03); padding:8px; border-radius:8px; font-size:13px; }
+    #verify { margin-top:8px; display:flex; gap:8px; }
+    #verify input { flex:1; }
+    footer { position:absolute; bottom:10px; left:12px; color:var(--muted); font-size:12px; }
+  </style>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+<body>
+  <div id="app">
+    <div id="canvas-area">
+      <!-- Three.js renderer will be appended here -->
+    </div>
+
+    <div id="ui">
+      <h2>Simulador: Caída libre (modelo cuadrático)</h2>
+
+      <label>Escenario</label>
+      <select id="scenario">
+        <option value="tierra">Tierra</option>
+        <option value="luna">Luna</option>
+        <option value="marte">Marte</option>
+        <option value="gaseoso">Planeta gaseoso</option>
+        <option value="agua">Líquido (agua)</option>
+      </select>
+
+      <div class="row">
+        <div>
+          <label>Gravedad g (m/s²)</label>
+          <input id="input-g" type="number" step="0.01" value="9.81">
+        </div>
+        <div>
+          <label>Masa m (kg)</label>
+          <input id="input-m" type="number" step="0.1" value="1.0">
+        </div>
+      </div>
+
+      <label>Coef. de arrastre k</label>
+      <input id="input-k" type="number" step="0.01" value="0.5">
+      <label>Modelo de ecuación</label>
+      <select id="model">
+        <option value="linear">Lineal (kv)</option>
+        <option value="quadratic" selected>Cuadrático (kv²)</option>
+      </select>
+
+      <div class="row">
+        <div>
+          <label>Altura inicial y₀ (m)</label>
+          <input id="input-y0" type="number" step="0.1" value="5">
+        </div>
+        <div>
+          <label>Velocidad inicial v₀ (m/s)</label>
+          <input id="input-v0" type="number" step="0.1" value="0">
+        </div>
+      </div>
+
+      <label>Coeficiente de rebote</label>
+      <input id="input-bounce" type="number" step="0.01" value="0.8">
+
+      <div class="row">
+        <button id="btn-start">▶ Iniciar</button>
+        <button id="btn-pause" class="small">▉ Pausar</button>
+      </div>
+      <button id="btn-reset" class="small"> ↺ Reiniciar</button>
+
+      <div id="charts">
+        <canvas id="chart-y" class="chart-canvas"></canvas>
+        <canvas id="chart-v" class="chart-canvas"></canvas>
+      </div>
+
+      <div id="analysis">
+        <strong>Análisis</strong>
+        <div id="analysis-body">Ejecuta una simulación para ver resultados (tiempo de caída, velocidad de impacto, velocidad terminal).</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chart.js UMD -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
+>>>>>>> master

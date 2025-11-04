@@ -24,7 +24,7 @@ scene.add(new THREE.AmbientLight(0xffffff, 0.35));
 
 // Suelo y esfera
 const floor = new THREE.Mesh(
-  new THREE.BoxGeometry(20, 20, 0.5),
+  new THREE.BoxGeometry(30, 30, 0.5),
   new THREE.MeshStandardMaterial({ color: 0x2b6b2b, roughness: 1 })
 );
 floor.rotation.x = -Math.PI / 2;
@@ -34,15 +34,34 @@ scene.add(floor);
 
 // --- Texturas ---
 const textureLoader = new THREE.TextureLoader();
+
+function crearMaterial(path, normalPath) {
+  const map = textureLoader.load(path);
+  const normal = textureLoader.load(normalPath);
+
+  // --- Corrige el espacio de color ---
+  map.colorSpace = THREE.SRGBColorSpace;
+  normal.colorSpace = THREE.LinearSRGBColorSpace;
+
+  return new THREE.MeshStandardMaterial({
+    map: map,
+    normalMap: normal,
+    roughness: 1.0,
+    metalness: 0.0,
+  });
+}
+
+
+const materialt = crearMaterial('textures/tierra.jpg', 'textures/tierraN.jpg');
+const materialm = crearMaterial('textures/marte.jpg',  'textures/marteN.jpg');
+const materiala = crearMaterial('textures/agua.jpg',   'textures/aguaN.jpg');
+const materialg = crearMaterial('textures/gas.jpg',    'textures/gasN.jpg');
+const materiall = crearMaterial('textures/luna.jpg',   'textures/lunaN.jpg');
+
 const textureBall = textureLoader.load('textures/pelota.jpg');
 const normalBall = textureLoader.load('textures/pelotaN.jpg');
-const ballMaterial = new THREE.MeshPhongMaterial({
-  map: textureBall,
-  normalMap: normalBall,
-  shininess: 100,
-});
+const ballMaterial = new THREE.MeshStandardMaterial({ map: textureBall, normalMap: normalBall });
 
-const ballMat = new THREE.MeshStandardMaterial({ color: 0x00e0ff, metalness: 0.1, roughness: 0.5 });
 const ball = new THREE.Mesh(new THREE.SphereGeometry(0.6, 32, 32), ballMaterial);
 ball.castShadow = true;
 scene.add(ball);
@@ -77,11 +96,11 @@ const btnReset = q('btn-reset');
 const analysisBody = q('analysis-body');
 
 const scenarios = {
-  earth: { g: 9.81, k: 0.5, floorColor: 0x2b6b2b, bg: 0x87CEEB },
-  moon:  { g: 1.62, k: 0.0, floorColor: 0x6b6b6b, bg: 0x9a9a9a },
-  mars:  { g: 3.71, k: 0.2, floorColor: 0x8d3b2b, bg: 0xff8855 },
-  gas:   { g: 25.0,k: 1.2, floorColor: 0xd2b48c, bg: 0xf0e0b0 },
-  water: { g: 9.81, k: 3.0, floorColor: 0x334f6b, bg: 0x0f2b44 }
+  tierra:  { g: 9.81,  k: 0.5, floorMaterial: materialt },
+  luna:    { g: 1.62,  k: 0.0, floorMaterial: materiall },
+  marte:   { g: 3.71,  k: 0.2, floorMaterial: materialm },
+  gaseoso: { g: 25.0,  k: 1.2, floorMaterial: materialg },
+  agua:    { g: 9.81,  k: 3.0, floorMaterial: materiala }
 };
 
 // --------------------------- Estado de simulación ---------------------------
@@ -116,21 +135,54 @@ const chartV = new Chart(chartVCtx, {
   options: { animation: false, plugins: { legend: { display: true } }, scales: { x: {}, y: {} } }
 });
 
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+
 // --------------------------- Funciones auxiliares ---------------------------
 function setScenario(name) {
   const s = scenarios[name];
+  if (!s) return console.warn('Escenario no encontrado:', name);
+
+  // --- Actualizar parámetros en la UI ---
   inputG.value = s.g;
   inputK.value = s.k;
   inputM.value = 1.0;
   inputY0.value = 5;
   inputV0.value = 0;
   inputBounce.value = 0.8;
-
-  // <- AÑADE ESTA LÍNEA para garantizar un modelo por defecto
   if (modelSelect) modelSelect.value = 'quadratic';
 
-  floor.material.color.setHex(s.floorColor);
-  scene.background = new THREE.Color(s.bg);
+  // --- Cambiar material del suelo ---
+  if (s.floorMaterial) {
+    floor.material = s.floorMaterial;
+    floor.material.needsUpdate = true;
+  }
+
+  // --- Cargar el cubemap ---
+  const path = `cube_map/${name}/`;  // ejemplo: cube_map/tierra/
+  const format = '.png';
+  const urls = [
+    path + 'px' + format, path + 'nx' + format,
+    path + 'py' + format, path + 'ny' + format,
+    path + 'pz' + format, path + 'nz' + format
+  ];
+
+  const cubeLoader = new THREE.CubeTextureLoader();
+  cubeLoader.load(
+    urls,
+    (cubeTex) => {
+      cubeTex.colorSpace = THREE.SRGBColorSpace;
+      scene.background = cubeTex;
+      scene.environment = cubeTex;
+    },
+    undefined,
+    (err) => {
+      console.warn(`No se encontró cubemap para "${name}".`);
+      scene.background = new THREE.Color(0x000000);
+      scene.environment = null;
+    }
+  );
 }
 
 
@@ -315,7 +367,7 @@ function finalizeAnalysis() {
 }
 
 // --------------------------- Inicialización ---------------------------
-setScenario('earth');
+setScenario('tierra');
 resetSimulationState();
 lastFrame = performance.now();
 requestAnimationFrame(loop);

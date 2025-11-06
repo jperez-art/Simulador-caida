@@ -372,7 +372,7 @@ function finalizeAnalysis() {
     <strong>🕒 Tiempo total:</strong> ${timeTotal.toFixed(3)} s<br>
     <strong>💥 Velocidad en impacto:</strong> ${vImpact.toFixed(3)} m/s<br>
     <strong>⚡ Velocidad terminal (teórica):</strong> ${isFinite(vtTheory) ? vtTheory.toFixed(4) + ' m/s' : '<em>No aplica (k=0)</em>'}<br>
-    <strong>📉 Velocidad terminal (simulada):</strong> ${sim.terminalSim ? sim.terminalSim.toFixed(4) + ' m/s' : '<em>No alcanzada (estimada con vImpact)</em>'}<br>
+    <strong>📉 Velocidad terminal (simulada):</strong> ${sim.terminalSim ? sim.terminalSim.toFixed(4) + ' m/s' : '<em>No alcanzada </em>'}<br>
     <strong>🧮 Coeficiente k estimado:</strong> ${kCalc}<br>
     <strong>📘 Modelo de resistencia:</strong> ${modelSelect && modelSelect.value === "linear" ? "Lineal (kv)" : "Cuadrático (kv²)"}
   </div>

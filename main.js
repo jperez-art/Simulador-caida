@@ -116,7 +116,10 @@ let sim = {
   k: 0.5,
   bounce: 0.8,
   history: { t: [], y: [], v: [] },
-  terminalSim: null
+  terminalSim: null, 
+  prevV: 0,
+  stableCount: 0
+
 };
 
 // --------------------------- Gráficos ---------------------------
@@ -257,16 +260,24 @@ function loop(now) {
       sim.history.y.push(sim.y);
       sim.history.v.push(sim.v);
 
-  if (sim.terminalSim === null && sim.k > 0) {
-    const vtTheory = computeTheoreticalVt(sim.m, sim.g, sim.k);
-    // cuando la velocidad actual está cerca de la teórica, guardamos vt simulada
-    if (isFinite(vtTheory)) {
-      const dvAbs = Math.abs(vtTheory - Math.abs(sim.v)); // comparando magnitudes
-      if (dvAbs < Math.max(0.5, 0.1 * vtTheory)) {
-        sim.terminalSim = Math.abs(sim.v);
-      }
-    }
+  // --- Detección de velocidad terminal simulada (por estabilidad) ---
+if (sim.terminalSim === null && sim.k > 0) {
+  const diff = Math.abs(sim.v - sim.prevV);
+
+  // si la variación de velocidad es muy pequeña durante varios pasos seguidos
+  if (diff < 0.01) {
+    sim.stableCount++;
+  } else {
+    sim.stableCount = 0;
   }
+
+  if (sim.stableCount > 50) { // se considera estable por ~50 iteraciones seguidas (~0.4 s)
+    sim.terminalSim = Math.abs(sim.v);
+  }
+
+  sim.prevV = sim.v;
+}
+
 
 
       if (sim.y <= 0) {
@@ -341,33 +352,37 @@ modelSelect.addEventListener('change', () => {
 
 function finalizeAnalysis() {
   const timeTotal = sim.history.t.at(-1) || sim.t;
-  const vImpact = sim.history.v.at(-1) || sim.v;
+  const vImpact = Math.abs(sim.history.v.at(-1) || sim.v);
   const vtTheory = computeTheoreticalVt(sim.m, sim.g, sim.k);
-  const vtSim = sim.terminalSim || 0;
+  const vtSim = sim.terminalSim || vImpact; // si no hay vtSim, usamos la del impacto
 
   let kCalc = '—';
-  if (vtSim > 0 && isFinite(vtSim)) {
+  if (isFinite(vtSim) && vtSim > 0) {
     if (modelSelect && modelSelect.value === "linear") {
-      // k = m g / vt  (lineal)
+      // k = m g / v_terminal
       kCalc = (sim.m * sim.g / vtSim).toFixed(4);
     } else {
-      // k = m g / vt^2  (cuadrático)
+      // k = m g / v_terminal²
       kCalc = (sim.m * sim.g / (vtSim * vtSim)).toFixed(4);
     }
   }
 
   analysisBody.innerHTML = `
-    <strong>Tiempo total:</strong> ${timeTotal.toFixed(3)} s<br>
-    <strong>Velocidad en impacto:</strong> ${vImpact.toFixed(3)} m/s<br>
-    <strong>Velocidad terminal (teórica):</strong> ${isFinite(vtTheory) ? vtTheory.toFixed(4) + ' m/s' : 'No aplica (k=0)'}<br>
-    <strong>Velocidad terminal (simulada):</strong> ${sim.terminalSim ? sim.terminalSim.toFixed(4) + ' m/s' : 'No alcanzada'}<br>
-    <strong>k estimado:</strong> ${kCalc}<br>
-    <strong>Modelo:</strong> ${modelSelect && modelSelect.value === "linear" ? "Lineal (kv)" : "Cuadrático (kv²)"}
+  <div style="line-height:1.6; font-size: 15px;">
+    <strong>🕒 Tiempo total:</strong> ${timeTotal.toFixed(3)} s<br>
+    <strong>💥 Velocidad en impacto:</strong> ${vImpact.toFixed(3)} m/s<br>
+    <strong>⚡ Velocidad terminal (teórica):</strong> ${isFinite(vtTheory) ? vtTheory.toFixed(4) + ' m/s' : '<em>No aplica (k=0)</em>'}<br>
+    <strong>📉 Velocidad terminal (simulada):</strong> ${sim.terminalSim ? sim.terminalSim.toFixed(4) + ' m/s' : '<em>No alcanzada (estimada con vImpact)</em>'}<br>
+    <strong>🧮 Coeficiente k estimado:</strong> ${kCalc}<br>
+    <strong>📘 Modelo de resistencia:</strong> ${modelSelect && modelSelect.value === "linear" ? "Lineal (kv)" : "Cuadrático (kv²)"}
+  </div>
   `;
 }
+
 
 // --------------------------- Inicialización ---------------------------
 setScenario('tierra');
 resetSimulationState();
 lastFrame = performance.now();
 requestAnimationFrame(loop);
+
